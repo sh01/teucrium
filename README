@@ -1,0 +1,32 @@
+Summary:
+Teucrium is a traffic-grapher.
+Its focus is on performance, flexibility, features, ability to consider
+details of individual packets for counting purposes and accuracy. To
+effectively achieve these goals, cross-platform compatiblity has been
+sacrificed; teucrium currently only works on Linux.
+
+Dependencies:
+* Some reasonably modern Linux
+* Python (>=2.4, <3.0)
+* python-ctypes
+* gonium
+* rrdtool
+* python-rrdtool
+
+Design Overview:
+Copying individual packets to userspace to count them there is both
+inefficient, and, in many cases, inaccurate under sufficient load.
+
+Fortunately, Linux's netfilter subsystem can be used to count traffic in
+kernelspace; in addition, netfilter offers many powerful options for filtering
+packets, which can be used to provide seperate counters for different types of
+packets.
+Spawning an {ip,ip6}tables instance for each read of xtables counters would
+be relatively inefficient, and also highly inelegant. Instead, teucrium uses
+the gonium.linux.xtables netfilter-interface for counter reading. This has the
+added benefit on allowing gonium to function with just the CAP_NET_ADMIN posix
+capability; {ip,ip6}tables (through their use of raw sockets) additionally
+require CAP_NET_RAW.
+Note that an iptables binary is still required for initially setting up the
+counting rules, since the gonium.linux.xtables interface doesn't have
+write-support for xtables rules (and likely never will).
