@@ -8,7 +8,7 @@ XS-Python-Version: 2.4, 2.5
 
 Package: teucrium
 Architecture: all
-Depends: python (>= 2.4), python-gonium, python-ctypes, python-rrdtool
+Depends: python (>= 2.4), python-gonium, python-ctypes, python-rrdtool | python-rrd
 XB-Python-Version: ${python:Versions}
 Description: flexible and powerful traffic graphing
  Teucrium is a traffic grapher based on linux netfilter (i.e. {ip,ip6}tables)
