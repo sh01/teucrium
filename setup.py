@@ -30,7 +30,7 @@ class install_scripts(_install_scripts):
       fn_src = 'src/teucrium/main.py'
       byte_compile((fn_src,))
       self.copy_file(fn_src + 'c', fn)
-      os.system('chmod a+x %r' % (fn,))
+      os.system('chmod g+x,o-x %r' % (fn,))
 
 setup(name='teucrium',
    version='0.2',

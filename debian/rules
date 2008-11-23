@@ -1,0 +1,36 @@
+#!/usr/bin/make -f
+# based on:
+#  http://www.debian.org/doc/maint-guide/ch-dreq.en.html
+#  http://wiki.debian.org/DebianPython/NewPolicy
+
+PKGNAME = teucrium
+TARGETDIR = debian/${PKGNAME}
+
+.PHONY: clean binary-indep binary-arch build install
+
+build:
+
+clean:
+	rm -rf ${TARGETDIR}
+
+install: src/*
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+	mkdir -p ${TARGETDIR}
+	python setup.py install --root=${TARGETDIR}
+
+binary: binary-arch binary-indep
+
+binary-arch:
+
+binary-indep: install
+	dh_testdir
+	dh_testroot
+	dh_fixperms
+	dh_pysupport
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb

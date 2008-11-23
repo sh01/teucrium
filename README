@@ -5,13 +5,19 @@ details of individual packets for counting purposes and accuracy. To
 effectively achieve these goals, cross-platform compatiblity has been
 sacrificed; teucrium currently only works on Linux.
 
-Dependencies:
-* Some reasonably modern Linux
+Hard Dependencies:
+* A reasonably modern Linux
 * Python (>=2.4, <3.0)
 * python-ctypes
 * gonium
 * rrdtool
 * python-rrdtool
+
+Suggested kernel features:
+* binfmt_misc
+
+Suggested utilities:
+* setcap
 
 Design Overview:
 Copying individual packets to userspace to count them there is both
@@ -30,3 +36,6 @@ require CAP_NET_RAW.
 Note that an iptables binary is still required for initially setting up the
 counting rules, since the gonium.linux.xtables interface doesn't have
 write-support for xtables rules (and likely never will).
+
+Installation Notes:
+See INSTALL file.
