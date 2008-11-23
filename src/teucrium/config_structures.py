@@ -16,12 +16,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import os
+import os, os.path
+
+from gonium.linux.xtables import XTablesIP, XTablesIP6
+
+from constants import *
+from rrd_tc import RRDTrafficCounter
+from rrd_creator import RRASpec, RRDCreator
 
 POS_LOCAL = 0
 POS_REMOTE = 1
 DIR_IN = 0
 DIR_OUT = 1
+
+class ConfigError(StandardError):
+   pass
 
 class LRPort:
    """Abstract baseclass for LocalPort, RemotePort"""
@@ -58,20 +67,37 @@ class XTRule:
       DIR_IN: 'xt_ms_in',
       DIR_OUT:'xt_ms_out'
    }
-   def __init__(self, ds, matches, id=None, rule_id_get=None):
+   def __init__(self, ds, matches, id=None, rule_id_get=None, color='',
+          target='RETURN'):
       """
       ds: rrd datasource to dump data from this counter into
       matches: XT matches for this rule
       id: string to use for identifying this rule in netfilter chain
+      (if not specified, use rule_id_get())
+      color: rrd color to use for graphing traffic counted by this rule
+      target: NF targeto associate with rule; defaults to 'RETURN'
       """
       if (isinstance(matches, str)):
          raise ValueError('Invalid matches sequence %r; did you forget a\
             container?' % (matches,))
+      
+      if (color != ''):
+         if (not color.startswith('#')):
+            raise ValueError('Invalid colorspec %r; needs to be empty or start with "#".')
+         if (len(color) != 7):
+            raise ValueError('Invalid colorspec %r; needs to be 7 chars in length.')
+         try:
+            int(color[1:],16)
+         except ValueError:
+            raise ValueError('Invalid colorspec %r; 6 last chars need to be hexadecimal digits.')
+      
       self.ds = ds
       self.matches = matches
       if (id is None):
          id = rule_id_get()
       self.id = id
+      self.color = color
+      self.target = target
    
    @classmethod
    def match2string(cls, match, dir_):
@@ -82,7 +108,10 @@ class XTRule:
       return str(match)
    
    def xt_argstring_get(self, chain, dir_):
-      return self.XT_ARG_FMT % (chain, self.id, ' '.join([self.match2string(m, dir_) for m in self.matches]))
+      argstring = ' '.join([self.match2string(m, dir_) for m in self.matches])
+      if (self.target):
+         argstring += ' -j %s' % (self.target,)
+      return self.XT_ARG_FMT % (chain, self.id, argstring)
 
 class XTCall:
    logger = logging.getLogger('XTCall')
@@ -101,14 +130,14 @@ class XTCall:
    
    def xt_call(self):
       cs = self.callstring_get()
-      os.log(20, 'Executing %r.' % (cs,))
+      self.log(20, 'Executing %r.' % (cs,))
       rcode = os.system(cs)
-      if (rv and not self.errors_ignore):
+      if (rcode and not self.errors_ignore):
          raise StandardError('os.system(%s) failed. rcode: %r' % (cs,rcode))
 
 
-class XTTrafficSpec:
-   """Abstract baseclass for *TTrafficSpec classes"""
+class XTTrafficRules:
+   """Abstract baseclass for *TTrafficRules classes"""
    DIRS = {
       DIR_IN: ('in', '-i'),
       DIR_OUT: ('out', '-o')
@@ -116,15 +145,74 @@ class XTTrafficSpec:
    RULE_ID_FMT = 'teuc_%d'
    CHAIN_FMT_BASE = 'teuc_%s'
    CHAIN_FMT = CHAIN_FMT_BASE % ('%s_%s',)
-   def __init__(self, tablename, interface_specs):
+   
+   # Which non-teuc chains to hook into to get traffic
+   EXT_CHAINS = {
+       'filter':{
+          DIR_IN: ('INPUT', 'FORWARD'),
+          DIR_OUT: ('OUTPUT', 'FORWARD'),
+       }
+       'mangle':{
+          DIR_IN: ('PREROUTING',)
+          DIR_OUT: ('POSTROUTING',)
+       }
+       'nat': {
+          DIR_IN: ('PREROUTING',),
+          DIR_OUT: ('POSTROUTING',)
+       }
+   }
+   
+   def __init__(self, tablename, interface_specs, step=2,
+         rrddb_base_filename='teucriumdb', rrd_heartbeat=None, rrd_max='U',
+         rra_specs=None):
+      """Initialize instance.
+      
+      Arguments:
+      tablename: xt table to use; e.g. 'filter', 'mangle' or 'nat'
+      interface_specs: sequence of interface-strings to match against; e.g. ('eth+', 'ppp0')
+      step: RRD step value (in seconds)
+      rrddb_base_filename: Filename prefix to use for rrd files
+      # The following parameters are only relevant for rrd db creation
+      rrd_heartbeat: RRD heartbeat (in seconds); defaults to step
+      rrd_max: maximum for rrd DS
+      rra_specs: initial RRA spec list; note that these can also be added after
+            instantiation by calling the rra_add() method
+      """
       if not (hasattr(self, 'xt_binary')):
          raise StandardError('%r should not be instantiated; use a subclass' % (self.__class__))
+      
+      if not (tablename in self.EXT_CHAINS):
+         raise ValueError("Table %r isn't supported." % (tablename,))
+      
+      if (rrd_heartbeat is None):
+         rrd_heartbeat = step
+      if (rra_specs is None):
+         rra_specs = []
       self.rules = []
       self.rule_ids = set()
       self.rule_idnum_last = 0
       self.interface_specs = interface_specs
       self.tablename = tablename
-   
+      self.step = step
+      self.rrddb_base_filename = rrddb_base_filename
+      self.rrd_heartbeat = rrd_heartbeat
+      self.rrd_max = rrd_max
+      self.rra_specs = rra_specs
+# ---------------------------------------------------------------- configuration interface
+   def rule_add(self, *args, **kwargs):
+      """Add traffic counting rule to this instance. See XTRule.__init__() for
+         list and explanation of arguments."""
+      kwargs['rule_id_get'] = self.rule_id_get
+      rule = XTRule(*args, **kwargs)
+      self.rules.append(rule)
+      self.rule_ids.add(rule.id)
+
+   def rra_add(self, *args, **kwargs):
+      """Add RRA spec; this is only relevant for rrdcreate() mode. Arguments
+         are as to rrdtool::rrdcreate::RRA. (1.3.1)"""
+      self.rra_specs.append(RRASpec(*args, **kwargs))
+
+# ---------------------------------------------------------------- Internal interface
    def rule_id_get(self):
       rule_id = self.RULE_ID_FMT % (self.rule_idnum_last,)
       while (rule_id in self.rule_ids):
@@ -132,13 +220,7 @@ class XTTrafficSpec:
          rule_id = self.RULE_ID_FMT % (self.rule_idnum_last,)
       self.rule_idnum_last += 1
       return rule_id
-   
-   def rule_add(self, *args, **kwargs):
-      kwargs['rule_id_get'] = self.rule_id_get
-      rule = XTRule(*args, **kwargs)
-      self.rules.append(rule)
-      self.rule_ids.add(rule.id)
-   
+
 # ---------------------------------------------------------------- IPT output
    def xt_callstring_chainmake_get(self, chainname, flush=True):
       rv = [self.xtcall('-N %s' % (chainname,), errors_ignore=True)]
@@ -167,7 +249,8 @@ class XTTrafficSpec:
    def xt_callstrings_get(self):
       rv = []
       for dir_ in self.DIRS:
-         rv += self.xt_callstring_chainmake_get(self.CHAIN_FMT_BASE % (self.get_dirname(dir_)), flush=False)
+         chain = self.CHAIN_FMT_BASE % (self.get_dirname(dir_))
+         rv += self.xt_callstring_chainmake_get(chain, flush=False)
       
       for (iface_spec, dir_) in self.xt_dirifaces_get():
          chainname = self.CHAIN_FMT % (iface_spec, self.get_dirname(dir_))
@@ -178,31 +261,108 @@ class XTTrafficSpec:
             
          for rule in self.rules:
             rv += self.xtcall_countrule(rule.xt_argstring_get(chainname, dir_))
+
+      for dir_ in self.DIRS:
+         tgt_chain = self.CHAIN_FMT_BASE % (self.get_dirname(dir_))
+         src_chains = self.EXT_CHAINS[self.tablename][dir_]
+         for src_chain in src_chains:
+            rv += [self.xtcall('-D %s -j %s' % (src_chain,tgt_chain), errors_ignore=True),
+               self.xtcall('-I %s 1 -j %s' % (src_chain,tgt_chain))]
       
       return rv
    
-# ---------------------------------------------------------------- xtables reader output
+   def xt_call(self):
+      for cmd in self.xt_callstrings_get():
+         cmd.xt_call()
+      
    
+# ---------------------------------------------------------------- rrd tc output
+   def rrdtc_param_get(self):
+      rules2ds = {}
+      for rule in self.rules:
+         rules2ds[rule.id] = rule.ds
+      
+      chain2diriface = {}
+      
+      for (iface_spec, dir_) in self.xt_dirifaces_get():
+         chainname = self.CHAIN_FMT % (iface_spec, self.get_dirname(dir_))
+         chain2diriface[chainname] = (iface_spec, dir_)
+      
+      return (rules2ds, chain2diriface)
+   
+   def rrdtc_build(self, ed):
+      (rules2ds, chain2diriface) = self.rrdtc_param_get()
+      return RRDTrafficCounter.build_with_xtp(ed, self.step, self.xt_cls(),
+         (self.tablename,), self.rrddb_base_filename, rules2ds, chain2diriface)
+   
+# ---------------------------------------------------------------- RRDCreator output
+   def rrdc_build(self):
+      ds_l = [rule.ds for rule in self.rules]
+      ds_l.sort()
+      return RRDCreator(self.rrddb_base_filename, self.interface_specs, ds_l,
+         self.rra_specs, self.step, self.rrd_heartbeat, self.rrd_max)
 
 
-class IPTTrafficSpec(XTTrafficSpec):
+class IPTTrafficRules(XTTrafficRules):
    xt_binary = 'iptables'
+   xt_cls = XTablesIP
 
-class IP6TTrafficSpec(XTTrafficSpec):
+class IP6TTrafficRules(XTTrafficRules):
    xt_binary = 'ip6tables'
+   xt_cls = XTablesIP6
+
+class TeucriumConfig:
+   """Teucrium config file reader"""
+   content = ('IPTTrafficRules', 'IP6TTrafficRules', 'LocalPort', 'RemotePort')
+   cfd_global = '/etc/teucrium/'
+   cfd_user = '~/.teucrium/'
+   cfn_name = 'teucrium.conf'
+   logger = logging.getLogger('TeucriumConfig')
+   log = logger.log
+   def __init__(self):
+      self.xtrs = []
+   def xtr_register(self, xtr):
+      self.xtrs.append(xtr)
+   def file_read(self, filename):
+      """Read config from file with specified name"""
+      g = {}
+      for s in self.content:
+         g[s] = globals()[s]
+      
+      g['xtr_register'] = self.xtr_register
+      execfile(filename, g)
+   
+   def cfd_user_get(self):
+      return os.path.expanduser(self.cfd_user)
+   
+   def config_read(self):
+      """Choose and read config file"""
+      for cf_dir in (self.cfd_user_get(), self.cfd_global):
+         cfn = os.path.join(cf_dir, self.cfn_name)
+         self.log(20, 'Trying to read config file %r ...' % (cfn,))
+         try:
+            os.chdir(cf_dir)
+            self.file_read(cfn)
+         except OSError:
+            pass
+         else:
+            self.log(20, 'Got config from %r.' % (cfn,))
+            break
+      raise ConfigError('No valid config file found.')
 
 # Arptables doesn't support --comment, hence we don't support arptables.
 
 if (__name__ == '__main__'):
    # Here there be self-tests.
    import pprint
-   iptts = IPTTrafficSpec('filter', ('eth+', 'ppp+', 'tun0', 'tun1'))
-   iptts.rule_add('httpd', ('-p tcp', LocalPort(80)))
-   iptts.rule_add('http_client', ('-p tcp', RemotePort(80)))
-   iptts.rule_add('tcp_other', ('-p tcp',))
-   iptts.rule_add('dns_client', ('-p udp', LocalPort(53)))
-   iptts.rule_add('udp_other', ('-p udp',))
-   pprint.pprint([xtc.callstring_get() for xtc in iptts.xt_callstrings_get()])
-   
+   ipttr = IPTTrafficRules('filter', ('eth+', 'ppp+', 'tun0', 'tun1'))
+   ipttr.rule_add('httpd', ('-p tcp', LocalPort(80)))
+   ipttr.rule_add('http_client', ('-p tcp', RemotePort(80)))
+   ipttr.rule_add('tcp_other', ('-p tcp',))
+   ipttr.rule_add('dns_client', ('-p udp', LocalPort(53)))
+   ipttr.rule_add('udp_other', ('-p udp',))
+   print('=== XT callstrings: ===')
+   pprint.pprint([xtc.callstring_get() for xtc in ipttr.xt_callstrings_get()])
+   pprint.pprint(ipttr.rrdc_build())
    print('=== All tests passed. ===')
 
