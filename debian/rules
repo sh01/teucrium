@@ -29,6 +29,7 @@ binary-indep: install
 	dh_testdir
 	dh_testroot
 	dh_fixperms
+	chmod o-x debian/usr/sbin/teucrium
 	dh_pysupport
 	dh_installdeb
 	dh_gencontrol
