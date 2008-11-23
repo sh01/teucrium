@@ -151,11 +151,11 @@ class XTTrafficRules:
        'filter':{
           DIR_IN: ('INPUT', 'FORWARD'),
           DIR_OUT: ('OUTPUT', 'FORWARD'),
-       }
+       },
        'mangle':{
-          DIR_IN: ('PREROUTING',)
+          DIR_IN: ('PREROUTING',),
           DIR_OUT: ('POSTROUTING',)
-       }
+       },
        'nat': {
           DIR_IN: ('PREROUTING',),
           DIR_OUT: ('POSTROUTING',)
