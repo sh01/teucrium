@@ -23,6 +23,7 @@ from gonium.linux.xtables import XTablesIP, XTablesIP6
 from constants import *
 from rrd_tc import RRDTrafficCounter
 from rrd_creator import RRASpec, RRDCreator
+from rrd_grapher import RRDGrapher
 
 POS_LOCAL = 0
 POS_REMOTE = 1
@@ -163,7 +164,11 @@ class XTTrafficRules:
    }
    
    def __init__(self, tablename, interface_specs, step=2,
-         rrddb_base_filename='teucriumdb', rrd_heartbeat=None, rrd_max='U',
+         rrddb_base_filename='teucriumdb',
+         graph_base_filename='teucrium', graph_periods=(600,3600,86400),
+         graph_counter_types=(CT_BYTES,CT_PACKETS), graph_base=1024,
+         graph_img_width=512, graph_img_height=256,
+         rrd_heartbeat=None, rrd_max='U',
          rra_specs=None):
       """Initialize instance.
       
@@ -172,6 +177,15 @@ class XTTrafficRules:
       interface_specs: sequence of interface-strings to match against; e.g. ('eth+', 'ppp0')
       step: RRD step value (in seconds)
       rrddb_base_filename: Filename prefix to use for rrd files
+      
+      # The following parameters are only relevant for graphing mode
+      graph_base_filename: filename prefix for generated images
+      graph_periods: lengths of time periods to graph (in seconds)
+      graph_counter_types: counter types (CT_BYTES/CT_PACKETS) to graph
+      graph_base: rrdgraph 'base' argument (typically 1000 or 1024)
+      graph_img_width: graph width
+      graph_img_height: graph height
+      
       # The following parameters are only relevant for rrd db creation
       rrd_heartbeat: RRD heartbeat (in seconds); defaults to step
       rrd_max: maximum for rrd DS
@@ -188,6 +202,7 @@ class XTTrafficRules:
          rrd_heartbeat = step
       if (rra_specs is None):
          rra_specs = []
+      
       self.rules = []
       self.rule_ids = set()
       self.rule_idnum_last = 0
@@ -195,9 +210,17 @@ class XTTrafficRules:
       self.tablename = tablename
       self.step = step
       self.rrddb_base_filename = rrddb_base_filename
+      
       self.rrd_heartbeat = rrd_heartbeat
       self.rrd_max = rrd_max
       self.rra_specs = rra_specs
+      
+      self.graph_fnprefix = graph_base_filename
+      self.graph_periods = graph_periods
+      self.graph_counter_types = graph_counter_types
+      self.graph_base = graph_base
+      self.graph_img_width = graph_img_width
+      self.graph_img_height = graph_img_height
 # ---------------------------------------------------------------- configuration interface
    def rule_add(self, *args, **kwargs):
       """Add traffic counting rule to this instance. See XTRule.__init__() for
@@ -301,6 +324,11 @@ class XTTrafficRules:
       ds_l.sort()
       return RRDCreator(self.rrddb_base_filename, self.interface_specs, ds_l,
          self.rra_specs, self.step, self.rrd_heartbeat, self.rrd_max)
+# ---------------------------------------------------------------- RRDGrapher output
+   def rrdg_build(self):
+      return RRDGrapher(self.rrddb_base_filename, self.interface_specs,
+         self.rules, self.graph_periods, self.graph_base, self.graph_img_width,
+         self.graph_img_height, self.graph_counter_types, self.graph_fnprefix)
 
 
 class IPTTrafficRules(XTTrafficRules):
@@ -313,7 +341,8 @@ class IP6TTrafficRules(XTTrafficRules):
 
 class TeucriumConfig:
    """Teucrium config file reader"""
-   content = ('IPTTrafficRules', 'IP6TTrafficRules', 'LocalPort', 'RemotePort')
+   content = ('IPTTrafficRules', 'IP6TTrafficRules', 'LocalPort', 'RemotePort',
+      'CT_BYTES', 'CT_PACKETS')
    cfd_global = '/etc/teucrium/'
    cfd_user = '~/.teucrium/'
    cfn_name = 'teucrium.conf'

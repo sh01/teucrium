@@ -84,8 +84,10 @@ def act_daemon(options, xtrs):
       pid_filing.file_pid()
    ed.event_loop()
    
-def act_graph():
-   FIXME
+def act_graph(options, xtrs):
+   for xtr in xtrs:
+      rrdg = xtr.rrdg_build()
+      rrdg.data_graph()
 
 actions = {
    'rrdcreate':act_rrdcreate,
