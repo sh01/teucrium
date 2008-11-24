@@ -35,8 +35,8 @@ class ConfigError(StandardError):
 
 class LRPort:
    """Abstract baseclass for LocalPort, RemotePort"""
-   FMT_SRC = '--sport %d'
-   FMT_DST = '--dport %d'
+   FMT_SRC = '--sport %s'
+   FMT_DST = '--dport %s'
    def __init__(self, port):
       self.port = port
       assert(self.POS in (POS_LOCAL, POS_REMOTE))
