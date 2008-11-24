@@ -50,17 +50,17 @@ def error_exit(msg, rcode=255):
    print('FATAL: ' + msg)
    sys.exit(rcode)
 
-def act_rrdcreate(options, xtrs):
+def act_rrdcreate(options, xtrs, ls):
    for xtr in xtrs:
       rrdc = xtr.rrdc_build()
       rrdc.create()
    sys.exit(0)
 
-def act_xtsetup(options, xtrs):
+def act_xtsetup(options, xtrs, ls):
   for xtr in xtrs:
      xtr.xt_call()
 
-def act_daemon(options, xtrs):
+def act_daemon(options, xtrs, ls):
    # Override the following test at your own peril. It's safer to run teucrium with
    # only CAP_NET_ADMIN. See capabilities(7), setcap(8) and teucrium's README for
    # details.
@@ -78,13 +78,13 @@ def act_daemon(options, xtrs):
    
    if not (options.ddebug):
       # Somewhat ugly, but can't be avoided.
-      logger.setLevel(0)
+      ls()
       pid_filing.release_pid_file(pid_filing.file_pid())
       daemon_init.daemon_init()
       pid_filing.file_pid()
    ed.event_loop()
    
-def act_graph(options, xtrs):
+def act_graph(options, xtrs, ls):
    for xtr in xtrs:
       rrdg = xtr.rrdg_build()
       rrdg.data_graph()
@@ -103,7 +103,10 @@ def main():
    handler_stderr.setLevel(20)
    handler_stderr.setFormatter(formatter)
    logger.addHandler(handler_stderr)
-
+   
+   def logger_shutdown():
+      logger.removeHandler(handler_stderr)
+   
    tc = TeucriumConfig()
    op = op_get()
    (options, args) = op.parse_args()
@@ -125,7 +128,7 @@ def main():
    else:
       tc.config_read()
    
-   act_func(options, tc.xtrs)
+   act_func(options, tc.xtrs, logger_shutdown)
 
 if (__name__ == '__main__'):
    main()
