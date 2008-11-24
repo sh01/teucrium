@@ -386,7 +386,7 @@ class TeucriumConfig:
          try:
             os.chdir(cf_dir)
             self.file_read(cfn)
-         except OSError:
+         except EnvironmentError:
             pass
          else:
             self.log(20, 'Got config from %r.' % (cfn,))
