@@ -33,7 +33,7 @@ class install_scripts(_install_scripts):
       os.system('chmod g+x,o-x %r' % (fn,))
 
 setup(name='teucrium',
-   version='0.2',
+   version='0.3',
    description='teucrium: using linux netfilter and rrdtool to graph traffic',
    author='Sebastian Hagen',
    author_email='sebastian_hagen@memespace.net',
