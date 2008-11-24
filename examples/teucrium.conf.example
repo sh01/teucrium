@@ -15,8 +15,12 @@ r = IPTTrafficRules('filter', ('eth+', 'ppp+', 'tun0', 'tun1'), step=2)
 r.rule_add('httpd', ('-p tcp', LocalPort(80)), color='#5050FF')
 # Local http clients
 r.rule_add('http_client', ('-p tcp', RemotePort(80)), color='#0000FF')
-# other tcp traffic
-r.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0')
+# You can also use arbitrary other netfilter matches in these specs,
+# assuming you have the necessary kernel and userspace support:
+r.rule_add('user foo', ('-m connmark', '--mark 2'), color='#505050')
+# If you want the legend string to be different from the rrd datasource, you
+# can specify it seperately:
+r.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0', legend='spooky unknown tcp traffic')
 # local dns clients
 r.rule_add('dns_client', ('-p udp', LocalPort(53)), color='#00FF00')
 # if you have multiport, you can also use {Local,Remote}ports
@@ -27,7 +31,7 @@ r.rule_add('udp_other', ('-p udp',), color='#50FF50')
 # RRA config; note that this is only used in rrdcreate mode
 # Arguments are just as for RRA commands used with rrdtool::rrdcreate; see
 # rrdcreate(1) for details
-r.rra_add('AVERAGE', 0.3, 1, 3800)       #     5sec resolution for about 1h
+r.rra_add('AVERAGE', 0.3, 1, 3800)     #     5sec resolution for about 1h
 r.rra_add('AVERAGE', 0, 4, 4400)       #    20sec resolution for about 1d
 r.rra_add('AVERAGE', 0.2, 128, 5600)   #   128sec resolution for about 8d
 r.rra_add('AVERAGE', 0.2, 1024, 2700)  #  1024sec resolution for about 30d
