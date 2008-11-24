@@ -67,7 +67,7 @@ class RRDGrapher(RRDFileNamer):
                         vname = vname2
                      
                      graph_cmd = 'AREA:%s%s' % (vname,rule.color)
-                     if (rule.legend):
+                     if (rule.legend and (dir_ == DIR_IN)):
                         graph_cmd += ':%s' % (rule.legend,)
                      graph_cmds.append(graph_cmd)
          
