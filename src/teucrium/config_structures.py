@@ -183,7 +183,7 @@ class XTTrafficRules:
    
    def __init__(self, tablename, interface_specs, step=2,
          rrddb_base_filename='rrd/',
-         graph_base_filename='teucrium', graph_periods=(600,3600,86400),
+         graph_base_filename='teucrium_', graph_periods=(600,3600,86400),
          graph_counter_types=(CT_BYTES,CT_PACKETS), graph_base=1024,
          graph_img_width=512, graph_img_height=256,
          rrd_heartbeat=None, rrd_max='U',

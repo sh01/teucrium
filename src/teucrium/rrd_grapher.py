@@ -29,7 +29,7 @@ class RRDGrapher(RRDFileNamer):
    log = logger.log
    IMG_FMT = 'PNG'
    TITLE_FMT = '%(ct_str)s on %(ifs)s'
-   FN_FMT = '%s_%s_%s_%s.png'
+   FN_FMT = '%s%s_%s_%s.png'
    CT_LABELS = {
       CT_BYTES:'bytes',
       CT_PACKETS:'packets'
