@@ -65,7 +65,11 @@ class RRDGrapher(RRDFileNamer):
                         vname2 = vname + '_'
                         defs.append('CDEF:%s=%s,-1,*' % (vname2,vname))
                         vname = vname2
-                     graph_cmds.append('AREA:%s%s' % (vname,rule.color))
+                     
+                     graph_cmd = 'AREA:%s%s' % (vname,rule.color)
+                     if (rule.legend):
+                        graph_cmd += ':%s' % (rule.legend,)
+                     graph_cmds.append(graph_cmd)
          
                ct_str = self.CT_LABELS[ct]
                fn = self.FN_FMT % (self.ifn_prefix, ifs, ct_str, period)

@@ -77,8 +77,8 @@ class XTRule:
       DIR_IN: 'xt_ms_in',
       DIR_OUT:'xt_ms_out'
    }
-   def __init__(self, ds, matches, id=None, rule_id_get=None, color='',
-          target='RETURN'):
+   def __init__(self, ds, matches, id=None, rule_id_get=None, target='RETURN',
+         color='', legend=None):
       """
       ds: rrd datasource to dump data from this counter into
       matches: XT matches for this rule
@@ -86,6 +86,7 @@ class XTRule:
       (if not specified, use rule_id_get())
       color: rrd color to use for graphing traffic counted by this rule
       target: NF targeto associate with rule; defaults to 'RETURN'
+      legend: legend string to graph; defaults to value of ds
       """
       if (isinstance(matches, str)):
          raise ValueError('Invalid matches sequence %r; did you forget a\
@@ -101,7 +102,11 @@ class XTRule:
          except ValueError:
             raise ValueError('Invalid colorspec %r; 6 last chars need to be hexadecimal digits.')
       
+      if (legend is None):
+         legend = ds
+      
       self.ds = ds
+      self.legend = legend
       self.matches = matches
       if (id is None):
          id = rule_id_get()
