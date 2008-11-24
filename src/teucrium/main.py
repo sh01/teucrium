@@ -75,8 +75,10 @@ def act_daemon(options, xtrs, ls):
       except ValueError:
          error_exit('Attempting to access NF table %r using %r failed.\nCheck if the table is present and you have CAP_NET_ADMIN.' % (xtr.tablename, xtr.xt_cls.__name__))
       rrdtcs.append(xtr.rrdtc_build(ed))
-   
+      
    if not (options.ddebug):
+      if not (os.path.exists('log')):
+         os.makedirs('log')
       # Somewhat ugly, but can't be avoided.
       ls()
       pid_filing.release_pid_file(pid_filing.file_pid())
