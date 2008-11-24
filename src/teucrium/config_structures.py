@@ -386,7 +386,8 @@ class TeucriumConfig:
          else:
             self.log(20, 'Got config from %r.' % (cfn,))
             break
-      raise ConfigError('No valid config file found.')
+      else:
+         raise ConfigError('No valid config file found.')
 
 # Arptables doesn't support --comment, hence we don't support arptables.
 
