@@ -66,9 +66,16 @@ class RRDGrapher(RRDFileNamer):
                         defs.append('CDEF:%s=%s,-1,*' % (vname2,vname))
                         vname = vname2
                      
-                     graph_cmd = 'AREA:%s%s' % (vname,rule.color)
+                     # mask unknowns so as not to break stacking
+                     vname2 = vname + '_'
+                     defs.append('CDEF:%s=%s,UN,0,%s,IF' % (vname2,vname,vname))
+                     vname = vname2
+                     
+                     graph_legend = ''
                      if (rule.legend and rule.color and (dir_ == DIR_IN)):
-                        graph_cmd += ':%s' % (rule.legend,)
+                        graph_legend += '%s' % (rule.legend,)
+                     
+                     graph_cmd = 'AREA:%s%s:%s:STACK' % (vname,rule.color,graph_legend)
                      graph_cmds.append(graph_cmd)
          
                ct_str = self.CT_LABELS[ct]
