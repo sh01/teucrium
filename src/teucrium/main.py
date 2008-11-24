@@ -35,6 +35,10 @@ def op_get():
    op = optparse.OptionParser(usage="teucrium [options] <action>\nactions: " + ' '.join(actions.keys()))
    op.add_option('-c', '--config', dest='cfn', help='config file to read', metavar='FILE')
    
+   og_rrdcreate = optparse.OptionGroup(op, 'rrdcreate options')
+   og_rrdcreate.add_option('--force-overwrite', dest='rc_overwrite', help='Overwrite existing rrd db files (DANGEROUS)', action='store_true', default=False)
+   op.add_option_group(og_rrdcreate)
+   
    og_daemon = optparse.OptionGroup(op, 'daemon options')
    og_daemon.add_option('-p', '--pid-file', dest='pfn', help='pid file to use', metavar='FILE', default='teucrium.pid')
    og_daemon.add_option('--debug-mode', dest='ddebug', help="don't fork, redirect output or suppress log messages", action='store_true', default=False)
@@ -53,7 +57,7 @@ def error_exit(msg, rcode=255):
 def act_rrdcreate(options, xtrs, ls):
    for xtr in xtrs:
       rrdc = xtr.rrdc_build()
-      rrdc.create()
+      rrdc.create(overwrite=options.rc_overwrite)
    sys.exit(0)
 
 def act_xtsetup(options, xtrs, ls):

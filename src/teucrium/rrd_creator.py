@@ -52,13 +52,17 @@ class RRDCreator(RRDFileNamer):
       self.heartbeat = heartbeat
       self.max = rrd_max
    
-   def create(self):
+   def create(self, overwrite=False):
       for rrd_filename in self.rrd_fn_iter_allbyifaceandds(self.iface_specs, self.ds_l):
          rfn_abs = os.path.abspath(rrd_filename)
-         self.log(20, 'Creating %r.' % (rfn_abs,))
          rdir = os.path.dirname(rrd_filename)
          if not (os.path.exists(rdir)):
             os.makedirs(rdir)
+         if ((not overwrite) and os.path.exists(rrd_filename)):
+            self.log(20, 'Not replacing existing file %r.' % (rfn_abs,))
+            continue
+         
+         self.log(20, 'Creating %r.' % (rfn_abs,))
          args = [rrd_filename, '-s', str(int(self.step)),
             'DS:%s:%s:%d:%s:%s' % (self.DS_RAW, self.DST,
             self.heartbeat,self.min,self.max)]
