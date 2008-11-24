@@ -39,10 +39,11 @@ class RRDTrafficCounter(RRDFileNamer):
       self.xtp = xtp
       xtp.em_xtentries.EventListener(self.xtp_data_process)
    
-   def rrd_update(self, iface, dir_, ds_l, cbytes_l, cpackets_l):
+   def rrd_update(self, iface, dir_, ds_l, tss, cbytes_l, cpackets_l):
       for (cl, ct) in ((cbytes_l, CT_BYTES), (cpackets_l, CT_PACKETS)):
-         target_fn = self.rrd_fn_get(iface, dir_, ct)
-         rrdtool.update(target_fn, '-t', ':'.join(ds_l), ':'.join([str(e) for e in cl]))
+         for (ds,val) in zip(ds_l,cl):
+            target_fn = self.rrd_fn_get(iface, dir_, ct, ds)
+            rrdtool.update(target_fn, '-t', self.DS_RAW, '%s:%s' % (tss, val))
    
    def xtp_data_process(self, event_listener, xtgec):
       chain_valid = False
@@ -50,7 +51,7 @@ class RRDTrafficCounter(RRDFileNamer):
       for rule in xtgec.xtge.entries:
          if (rule.get_target_str() == 'ERROR'):
             if ((chain_valid is True) and ds_l):
-               self.rrd_update(iface, dir_, ds_l, cbytes_l, cpackets_l)
+               self.rrd_update(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
             chain = rule.get_chain_name()
             try:
                (iface, dir_) = self.chain2diriface[chain]
@@ -59,8 +60,8 @@ class RRDTrafficCounter(RRDFileNamer):
                continue
             chain_valid = True
             ds_l = []
-            cbytes_l = [tss]
-            cpackets_l = [tss]
+            cbytes_l = []
+            cpackets_l = []
          
          if (chain_valid is False):
             # Not a teucrium counting chain
@@ -85,5 +86,5 @@ class RRDTrafficCounter(RRDFileNamer):
          cpackets_l.append(rule.counter_packets)
       
       if ((chain_valid is True) and ds_l):
-         self.rrd_update(iface, dir_, ds_l, cbytes_l, cpackets_l)
+         self.rrd_update(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
 

@@ -20,7 +20,7 @@
 from constants import *
 
 class RRDFileNamer:
-   RRD_FN_FMT = '%s_%s_%s_%s.rrd'
+   RRD_FN_FMT = '%s%s_%s_%s/%s.rrd'
    FN_DIR = {
       DIR_IN:'in',
       DIR_OUT:'out'
@@ -29,11 +29,13 @@ class RRDFileNamer:
       CT_BYTES:'bytes',
       CT_PACKETS:'packets'
    }
-   def rrd_fn_get(self, iface, dir_, counter_type):
-      return self.RRD_FN_FMT % (self.rrd_base_filename, iface, self.FN_DIR[dir_], self.FN_CT[counter_type])
+   DS_RAW = 'data'
+   def rrd_fn_get(self, iface, dir_, counter_type, ds):
+      return self.RRD_FN_FMT % (self.rrd_base_filename, iface, self.FN_DIR[dir_], self.FN_CT[counter_type], ds)
 
-   def rrd_fn_iter_allbyifaces(self, iface_specs):
+   def rrd_fn_iter_allbyifaceandds(self, iface_specs, ds_s):
       for iface_spec in iface_specs:
          for dirstring in self.FN_DIR.values():
             for cts in self.FN_CT.values():
-               yield self.RRD_FN_FMT % (self.rrd_base_filename, iface_spec, dirstring, cts)
+               for ds in ds_s:
+                  yield self.RRD_FN_FMT % (self.rrd_base_filename, iface_spec, dirstring, cts, ds)

@@ -17,7 +17,7 @@ r.rule_add('httpd', ('-p tcp', LocalPort(80)), color='#5050FF')
 r.rule_add('http_client', ('-p tcp', RemotePort(80)), color='#0000FF')
 # You can also use arbitrary other netfilter matches in these specs,
 # assuming you have the necessary kernel and userspace support:
-r.rule_add('user foo', ('-m connmark', '--mark 2'), color='#505050')
+r.rule_add('user_foo', ('-m connmark', '--mark 2'), color='#505050')
 # If you want the legend string to be different from the rrd datasource, you
 # can specify it seperately:
 r.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0', legend='spooky unknown tcp traffic')

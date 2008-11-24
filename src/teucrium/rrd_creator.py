@@ -18,7 +18,7 @@
 # Classes for executing rrdcreate commands
 
 import logging
-import os.path
+import os, os.path
 
 import rrdtool
 
@@ -53,12 +53,15 @@ class RRDCreator(RRDFileNamer):
       self.max = rrd_max
    
    def create(self):
-      for rrd_filename in self.rrd_fn_iter_allbyifaces(self.iface_specs):
+      for rrd_filename in self.rrd_fn_iter_allbyifaceandds(self.iface_specs, self.ds_l):
          rfn_abs = os.path.abspath(rrd_filename)
          self.log(20, 'Creating %r.' % (rfn_abs,))
-         args = [rrd_filename, '-s', str(int(self.step)),]
-         args.extend(['DS:%s:%s:%d:%s:%s' % (ds, self.DST,
-            self.heartbeat,self.min,self.max) for ds in self.ds_l])
+         rdir = os.path.dirname(rrd_filename)
+         if not (os.path.exists(rdir)):
+            os.makedirs(rdir)
+         args = [rrd_filename, '-s', str(int(self.step)),
+            'DS:%s:%s:%d:%s:%s' % (self.DS_RAW, self.DST,
+            self.heartbeat,self.min,self.max)]
          args.extend([rra.rrdcs_str() for rra in self.rra_specs])
          rrdtool.create(*args)
 

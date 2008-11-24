@@ -105,6 +105,10 @@ class XTRule:
       if (legend is None):
          legend = ds
       
+      for char in ('/\x00 '):
+         if (char in ds):
+            raise ValueError('Invalid char %r in ds %r.' % (char, ds))
+      
       self.ds = ds
       self.legend = legend
       self.matches = matches
@@ -178,7 +182,7 @@ class XTTrafficRules:
    }
    
    def __init__(self, tablename, interface_specs, step=2,
-         rrddb_base_filename='teucriumdb',
+         rrddb_base_filename='rrd/',
          graph_base_filename='teucrium', graph_periods=(600,3600,86400),
          graph_counter_types=(CT_BYTES,CT_PACKETS), graph_base=1024,
          graph_img_width=512, graph_img_height=256,

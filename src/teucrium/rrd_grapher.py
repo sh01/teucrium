@@ -56,10 +56,10 @@ class RRDGrapher(RRDFileNamer):
                graph_cmds = []
                for (dir_, dir_str) in self.FN_DIR.items():
                   for rule in self.rules:
-                     rrd_fn = self.rrd_fn_get(ifs, dir_, ct)
+                     rrd_fn = self.rrd_fn_get(ifs, dir_, ct, rule.ds)
                      vname = '%s_%s_%s' % (ifs,dir_str,rule.ds)
                      vname = vname.replace('+','_')
-                     defs.append('DEF:%s=%s:%s:%s' % (vname, rrd_fn, rule.ds, self.CF))
+                     defs.append('DEF:%s=%s:%s:%s' % (vname, rrd_fn, self.DS_RAW, self.CF))
                      if (dir_ == DIR_OUT):
                         # Invert sign for outgoing traffic to graph it below x-axis
                         vname2 = vname + '_'
