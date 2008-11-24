@@ -52,15 +52,24 @@ class LRPort:
       if (self.POS == POS_LOCAL):
          return self.FMT_SRC % (self.port,)
       return self.FMT_DST % (self.port,)
-   
+
+class LRMultiport:
+   FMT_SRC = '--sports %d'
+   FMT_DST = '--dports %d'
 
 class LocalPort(LRPort):
    """Specify port/portrange on *this* host"""
    POS = POS_LOCAL
 
+class LocalPorts(LRMultiport, LocalPort):
+   pass
+
 class RemotePort(LRPort):
    """Specify port/portrange on *remote* host"""
    POS = POS_REMOTE
+
+class RemotePorts(LRMultiport, RemotePort):
+   pass
 
 class XTRule:
    XT_ARG_FMT = '%s -m comment --comment %s %s'
@@ -342,7 +351,7 @@ class IP6TTrafficRules(XTTrafficRules):
 class TeucriumConfig:
    """Teucrium config file reader"""
    content = ('IPTTrafficRules', 'IP6TTrafficRules', 'LocalPort', 'RemotePort',
-      'CT_BYTES', 'CT_PACKETS')
+      'LocalPorts', 'RemotePorts', 'CT_BYTES', 'CT_PACKETS')
    cfd_global = '/etc/teucrium/'
    cfd_user = '~/.teucrium/'
    cfn_name = 'teucrium.conf'
