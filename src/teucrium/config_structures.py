@@ -54,8 +54,8 @@ class LRPort:
       return self.FMT_DST % (self.port,)
 
 class LRMultiport:
-   FMT_SRC = '--sports %d'
-   FMT_DST = '--dports %d'
+   FMT_SRC = '--sports %s'
+   FMT_DST = '--dports %s'
 
 class LocalPort(LRPort):
    """Specify port/portrange on *this* host"""
