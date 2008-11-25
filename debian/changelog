@@ -1,8 +1,8 @@
-teucrium (0.3.5) unstable; urgency=low
+teucrium (0.3.6) unstable; urgency=low
 
   * New upstream version
 
- -- Sebastian Hagen <sebastian_hagen@memespace.net>  Mon, 24 Nov 2008 20:54:00 +0100
+ -- Sebastian Hagen <sebastian_hagen@memespace.net>  Mon, 25 Nov 2008 22:45:00 +0100
 
 
 teucrium (0.2) unstable; urgency=low
