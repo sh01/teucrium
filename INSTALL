@@ -1,14 +1,14 @@
 Scripts for building pyeggs and debian packages are provided. However, there's
 some things that aren't taken care of by installing one of those packages:
 
-To execute /usr/sbin/teucrium you will need to have a binfmt-supporting kernel,
-and to configure binfmt_misc to execute python-bytecode-containing files
-bypassing them to the approriate python interpreter.
+To execute /usr/sbin/teucrium you will need to have a binfmt_misc-supporting
+kernel, and to configure binfmt_misc to execute python-bytecode-containing files
+by passing them to the approriate python interpreter.
 If your distribution doesn't take care of this for you (newer debian versions
 do), the commands to do it by hand for python versions 2.4 and 2.5 are:
 
-# echo ':python2.4:M::\x6d\xf2\x0d\x0a::/usr/bin/python2.4:C' > /proc/sys/fs/binfmt_misc/register
-# echo ':python2.5:M::\xb3\xf2\x0d\x0a::/usr/bin/python2.5:C' > /proc/sys/fs/binfmt_misc/register
+# echo ':python2.4:M::\x6d\xf2\x0d\x0a::/usr/bin/python2.4:' > /proc/sys/fs/binfmt_misc/register
+# echo ':python2.5:M::\xb3\xf2\x0d\x0a::/usr/bin/python2.5:' > /proc/sys/fs/binfmt_misc/register
 
 In addition, teucrium's daemon mode requires CAP_NET_ADMIN. You could just run
 it as root, but this is not recommended. Instead, you should use the 'setcap'
