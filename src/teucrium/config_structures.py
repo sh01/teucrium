@@ -187,7 +187,7 @@ class XTTrafficRules:
          graph_counter_types=(CT_BYTES,CT_PACKETS), graph_base=1024,
          graph_img_width=512, graph_img_height=256,
          rrd_heartbeat=None, rrd_max='U',
-         rra_specs=None):
+         rra_specs=None, graph_arguments=()):
       """Initialize instance.
       
       Arguments:
@@ -203,6 +203,7 @@ class XTTrafficRules:
       graph_base: rrdgraph 'base' argument (typically 1000 or 1024)
       graph_img_width: graph width
       graph_img_height: graph height
+      graph_arguments: sequence of raw arguments to pass to rrdtool.graph()
       
       # The following parameters are only relevant for rrd db creation
       rrd_heartbeat: RRD heartbeat (in seconds); defaults to step
@@ -239,6 +240,7 @@ class XTTrafficRules:
       self.graph_base = graph_base
       self.graph_img_width = graph_img_width
       self.graph_img_height = graph_img_height
+      self.graph_arguments = graph_arguments
 # ---------------------------------------------------------------- configuration interface
    def rule_add(self, *args, **kwargs):
       """Add traffic counting rule to this instance. See XTRule.__init__() for
@@ -346,7 +348,8 @@ class XTTrafficRules:
    def rrdg_build(self):
       return RRDGrapher(self.rrddb_base_filename, self.interface_specs,
          self.rules, self.graph_periods, self.graph_base, self.graph_img_width,
-         self.graph_img_height, self.graph_counter_types, self.graph_fnprefix)
+         self.graph_img_height, self.graph_counter_types, self.graph_fnprefix,
+         self.graph_arguments)
 
 
 class IPTTrafficRules(XTTrafficRules):

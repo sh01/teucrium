@@ -36,7 +36,7 @@ class RRDGrapher(RRDFileNamer):
    }
    CF = 'AVERAGE'
    def __init__(self, rrd_base_filename, interface_specs, rules, periods, base,
-         img_width, img_height, counter_types, ifn_prefix):
+         img_width, img_height, counter_types, ifn_prefix, extra_arguments):
       self.rrd_base_filename = rrd_base_filename
       self.interface_specs = interface_specs
       self.rules = rules[:]
@@ -47,8 +47,18 @@ class RRDGrapher(RRDFileNamer):
       self.img_width = img_width
       self.img_height = img_height
       self.ifn_prefix = ifn_prefix	# prefix for imge files to write
+      self.extra_arguments = extra_arguments
    
    def data_graph(self):
+      graph_args = [
+         '-z',
+         '-a', self.IMG_FMT,
+         '-b', str(self.base),
+         '-w', str(self.img_width),
+         '-h', str(self.img_height),
+      ] 
+      graph_args.extend(self.extra_arguments)
+      
       for ct in self.ct_s:
          for ifs in self.interface_specs:
             for period in self.periods:
@@ -84,13 +94,8 @@ class RRDGrapher(RRDFileNamer):
                ct_str = self.CT_LABELS[ct]
                fn = self.FN_FMT % (self.ifn_prefix, ifs, ct_str, period)
                self.log(20, 'Updating file %r.' % (fn,))
-               rrdtool.graph(fn,
-                  '-z',
+               rrdtool.graph(fn, 
+                  '-t', (self.TITLE_FMT % locals()),
                   '-s', str(-1*period),
-                  '-a', self.IMG_FMT,
-                  '-b', str(self.base),
-                  '-t', self.TITLE_FMT % locals(),
-                  '-w', str(self.img_width),
-                  '-h', str(self.img_height),
-                  *(defs + graph_cmds))
+                  *(graph_args + defs + graph_cmds))
 
