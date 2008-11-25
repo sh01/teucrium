@@ -55,6 +55,7 @@ class RRDGrapher(RRDFileNamer):
                defs = []
                graph_cmds = []
                for (dir_, dir_str) in self.FN_DIR.items():
+                  stackstr = ''
                   for rule in self.rules:
                      rrd_fn = self.rrd_fn_get(ifs, dir_, ct, rule.ds)
                      vname = '%s_%s_%s' % (ifs,dir_str,rule.ds)
@@ -75,8 +76,10 @@ class RRDGrapher(RRDFileNamer):
                      if (rule.legend and rule.color and (dir_ == DIR_IN)):
                         graph_legend += '%s' % (rule.legend,)
                      
-                     graph_cmd = 'AREA:%s%s:%s:STACK' % (vname,rule.color,graph_legend)
+                     graph_cmd = 'AREA:%s%s:%s:%s' % (vname,rule.color,graph_legend,stackstr)
                      graph_cmds.append(graph_cmd)
+                     if (stackstr == ''):
+                        stackstr = 'STACK'
          
                ct_str = self.CT_LABELS[ct]
                fn = self.FN_FMT % (self.ifn_prefix, ifs, ct_str, period)
