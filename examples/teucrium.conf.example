@@ -7,7 +7,11 @@ import os
 # Use the NF 'filter' table for counting, watch 4 interface-sets, and log data
 # every 2 seconds. Note that you shouldn't change the step without recreating
 # or modifying the rrd-files used by teucrium.
-r = IPTTrafficRules('filter', ('eth+', 'ppp+', 'tun0', 'tun1'), step=2)
+r = IPTTrafficRules('filter',
+   ('eth+', 'ppp+', 'tun0', 'tun1'),
+   step=2,
+   rrddb_base_filename='rrd_ip/',
+   graph_base_filename='ip_')
 
 # Traffic and counter-specific graphing config
 
@@ -41,3 +45,14 @@ r.rra_add('AVERAGE', 0.2, 65536, 4096) # 65  ksec res for about 1 tenyear
 # Mark construced traffic rules as active
 xtr_register(r)
 
+# Another *TrafficRules instance, for ipv6 traffic this time
+r2 = IP6TTrafficRules('filter', ('eth+',),
+   step=2,
+   rrddb_base_filename='rrd_ip6/',
+   graph_base_filename='ip6_')
+
+r2.rule_add('udp_other', ('-p udp',), color='#50FF50')
+r2.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0')
+r2.rra_add('AVERAGE', 0.3, 1, 3800)     #     5sec resolution for about 1h
+
+xtr_register(r2)
