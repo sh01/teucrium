@@ -39,3 +39,35 @@ write-support for xtables rules (and likely never will).
 
 Installation Notes:
 See INSTALL file.
+
+Usage Notes:
+Teucrium will print infos on its cmdline options when called with --help. It
+has four modes of operation:
+ * When called with 'rrdcreate', teucrium will create rrd files as specified by
+   its config file. You'll typically want to use this on initial install and
+   after adding new traffic types to its config file. This doesn't require any
+   elevated capabilities.
+ * When called with 'xtsetup', teucrium will write netfilter rules to use for
+   traffic counting. This mode requires CAP_NET_ADMIN and CAP_NET_RAW, and
+   should be called at boot, whenever the relevant NF table is flushed by
+   another program and after you adjust the relevant parts of its config file.
+
+   Care has been taken to not make this influence traffic filtering in any way,
+   and the rules written by teucrium shouldn't cause problems for any other
+   programs interacting with netfilter. Conversely, teucrium should work with
+   just about any set of filtering rules in addition to its own; however, for
+   this to work reliably, it's recommended to call 'xtsetup' *after* the other
+   rules have been set up.
+ * When called with 'graph', teucrium will turn data from its rrd files into
+   traffic graphs. This doesn't require any elevated capabilities; you'll
+   likely want to run teucrium in this mode at regular intervals, for instance
+   from an unprivileged user's crontab.
+ * Finally, 'daemon' will make teucrium fork into the background and repeatedly
+   poll the configured netfilter tables for new data, which it will then write
+   into its rrd files. CAP_NET_ADMIN (and nothing else) is required for this to
+   work, and teucrium will fail noisily if it doesn't have this capability at
+   startup.
+   You'll likely want to start teucrium in this mode at boot, for instance from
+   an init script. Afterwards, typically the only reason to restart it are
+   changes to its config.
+
