@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#Copyright 2008 Sebastian Hagen
+#Copyright 2008, 2009 Sebastian Hagen
 # This file is part of teucrium.
 #
 # teucrium is free software; you can redistribute it and/or modify
@@ -27,31 +27,46 @@ from constants import CT_BYTES, CT_PACKETS
 from rrd_fn import RRDFileNamer
 
 class RRDTrafficCounter(RRDFileNamer):
-   def __init__(self, rrd_base_filename, rules2ds, chain2diriface):
+   def __init__(self, rrd_base_filename, rules2ds, chain2diriface, commit_interval):
       self.rrd_base_filename = rrd_base_filename
       self.rules2ds = rules2ds
       self.chain2diriface = chain2diriface
+      self.commit_interval = commit_interval
+      self.commit_index = 0
+      self.output_cache = {}
    
    @classmethod
    def build_with_xtp(cls, ed, interval, xt, tables, *args, **kwargs):
       xtp = XTablesPoller(ed, interval, xt, tables)
-      self  = cls(*args, **kwargs)
+      self = cls(*args, **kwargs)
       self.xtp = xtp
       xtp.em_xtentries.EventListener(self.xtp_data_process)
+      # Write buffered data on shutdown
+      ed.Timer(ed.ts_omega, self.rrd_data_commit, self, ts_relative=False)
    
-   def rrd_update(self, iface, dir_, ds_l, tss, cbytes_l, cpackets_l):
-      for (cl, ct) in ((cbytes_l, CT_BYTES), (cpackets_l, CT_PACKETS)):
-         for (ds,val) in zip(ds_l,cl):
-            target_fn = self.rrd_fn_get(iface, dir_, ct, ds)
-            rrdtool.update(target_fn, '-t', self.DS_RAW, '%s:%s' % (tss, val))
+   def rrd_data_commit(self):
+      print self.output_cache
+      for ((iface, dir_, ds, ct), val_list) in self.output_cache.items():
+         target_fn = self.rrd_fn_get(iface, dir_, ct, ds)
+         rrdtool.update(target_fn, '-t', self.DS_RAW,
+            *('%s:%s' % (tss, val) for (tss,val) in val_list))
+         del(val_list[:])
    
+   def rrd_data_queue(self, iface, dir_, ds_l, tss, cbytes_l, cpackets_l):
+      for (ds, bc, pc) in zip(ds_l, cbytes_l, cpackets_l):
+         for (c, ct) in ((bc, CT_BYTES), (pc, CT_PACKETS)):
+            val_list = self.output_cache.get((iface, dir_, ds, ct),None)
+            if (val_list is None):
+               val_list = self.output_cache[(iface, dir_, ds, ct)] = []
+            val_list.append((tss, c))
+      
    def xtp_data_process(self, event_listener, xtgec):
       chain_valid = False
       tss = str(int(xtgec.ts_get()))
       for rule in xtgec.xtge.entries:
          if (rule.get_target_str() == 'ERROR'):
             if ((chain_valid is True) and ds_l):
-               self.rrd_update(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
+               self.rrd_data_queue(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
             chain = rule.get_chain_name()
             try:
                (iface, dir_) = self.chain2diriface[chain]
@@ -86,5 +101,9 @@ class RRDTrafficCounter(RRDFileNamer):
          cpackets_l.append(rule.counter_packets)
       
       if ((chain_valid is True) and ds_l):
-         self.rrd_update(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
+         self.rrd_data_queue(iface, dir_, ds_l, tss, cbytes_l, cpackets_l)
+      
+      self.commit_index = (self.commit_index + 1) % self.commit_interval
+      if (not self.commit_index):
+         self.rrd_data_commit()
 

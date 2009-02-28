@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#Copyright 2008 Sebastian Hagen
+#Copyright 2008, 2009 Sebastian Hagen
 # This file is part of teucrium.
 #
 # teucrium is free software; you can redistribute it and/or modify
@@ -187,7 +187,8 @@ class XTTrafficRules:
          graph_counter_types=(CT_BYTES,CT_PACKETS), graph_base=1024,
          graph_img_width=512, graph_img_height=256,
          rrd_heartbeat=None, rrd_max='U',
-         rra_specs=None, graph_arguments=()):
+         rra_specs=None, graph_arguments=(),
+         commit_interval=1):
       """Initialize instance.
       
       Arguments:
@@ -210,6 +211,10 @@ class XTTrafficRules:
       rrd_max: maximum for rrd DS
       rra_specs: initial RRA spec list; note that these can also be added after
             instantiation by calling the rra_add() method
+      
+      # The following parameters are only relevant for daemon (data collection) mode
+      commit_interval: Number of data points to collect before writing to rrd;
+            increase to reduce hd load.
       """
       if not (hasattr(self, 'xt_binary')):
          raise StandardError('%r should not be instantiated; use a subclass' % (self.__class__))
@@ -241,6 +246,8 @@ class XTTrafficRules:
       self.graph_img_width = graph_img_width
       self.graph_img_height = graph_img_height
       self.graph_arguments = graph_arguments
+      
+      self.commit_interval = commit_interval
 # ---------------------------------------------------------------- configuration interface
    def rule_add(self, *args, **kwargs):
       """Add traffic counting rule to this instance. See XTRule.__init__() for
@@ -301,7 +308,7 @@ class XTTrafficRules:
          rv += (self.xtcall_countrule('%s %s %s -j %s' % (self.CHAIN_FMT_BASE % (
             self.get_dirname(dir_),), self.get_dirxtmatch(dir_), iface_spec,
             chainname)))
-            
+         
          for rule in self.rules:
             rv += self.xtcall_countrule(rule.xt_argstring_get(chainname, dir_))
 
@@ -317,7 +324,6 @@ class XTTrafficRules:
    def xt_call(self):
       for cmd in self.xt_callstrings_get():
          cmd.xt_call()
-      
    
 # ---------------------------------------------------------------- rrd tc output
    def rrdtc_param_get(self):
@@ -336,7 +342,8 @@ class XTTrafficRules:
    def rrdtc_build(self, ed):
       (rules2ds, chain2diriface) = self.rrdtc_param_get()
       return RRDTrafficCounter.build_with_xtp(ed, self.step, self.xt_cls(),
-         (self.tablename,), self.rrddb_base_filename, rules2ds, chain2diriface)
+         (self.tablename,), self.rrddb_base_filename, rules2ds, chain2diriface,
+         self.commit_interval)
    
 # ---------------------------------------------------------------- RRDCreator output
    def rrdc_build(self):

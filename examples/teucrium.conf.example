@@ -9,9 +9,14 @@ import os
 # or modifying the rrd-files used by teucrium.
 r = IPTTrafficRules('filter',
    ('eth+', 'ppp+', 'tun0', 'tun1'),
-   step=2,
-   rrddb_base_filename='rrd_ip/',
-   graph_base_filename='ip_')
+   step=2,                        # rrd step value
+   rrddb_base_filename='rrd_ip/', # prefix for rrd db filenames
+   graph_base_filename='ip_',     # prefix for graph filenames
+   graph_periods=(600,3600,86400),# time periods to graph
+   graph_img_width=512,
+   graph_img_height=256,
+   commit_interval=16,            # only write data to disk every 16th step
+   )
 
 # Traffic and counter-specific graphing config
 
@@ -49,7 +54,8 @@ xtr_register(r)
 r2 = IP6TTrafficRules('filter', ('eth+',),
    step=2,
    rrddb_base_filename='rrd_ip6/',
-   graph_base_filename='ip6_')
+   graph_base_filename='ip6_',
+   commit_interval=16)
 
 r2.rule_add('udp_other', ('-p udp',), color='#50FF50')
 r2.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0')
