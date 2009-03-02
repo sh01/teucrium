@@ -45,7 +45,6 @@ class RRDTrafficCounter(RRDFileNamer):
       ed.Timer(ed.ts_omega, self.rrd_data_commit, self, ts_relative=False)
    
    def rrd_data_commit(self):
-      print self.output_cache
       for ((iface, dir_, ds, ct), val_list) in self.output_cache.items():
          target_fn = self.rrd_fn_get(iface, dir_, ct, ds)
          rrdtool.update(target_fn, '-t', self.DS_RAW,
