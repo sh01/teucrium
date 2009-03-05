@@ -15,7 +15,7 @@ r = IPTTrafficRules('filter',
    graph_periods=(600,3600,86400),# time periods to graph
    graph_img_width=512,
    graph_img_height=256,
-   commit_interval=16,            # only write data to disk every 16th step
+   commit_interval=4,             # write data to disk every 4th step
    )
 
 # Traffic and counter-specific graphing config
@@ -55,7 +55,7 @@ r2 = IP6TTrafficRules('filter', ('eth+',),
    step=2,
    rrddb_base_filename='rrd_ip6/',
    graph_base_filename='ip6_',
-   commit_interval=16)
+   commit_interval=4)
 
 r2.rule_add('udp_other', ('-p udp',), color='#50FF50')
 r2.rule_add('tcp_other', ('-p tcp',), color='#c0c0c0')
